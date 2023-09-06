@@ -1,0 +1,37 @@
+service: lambda-golang
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: go1.x
+  region: us-east-1
+  stage: ${opt:stage,'dev'}
+  deploymentBucket:
+    name: lambda-golang-sls-artifacts-${sls:stage}
+  iam:
+    role:
+      name: test-lambda-golang-${sls:stage}
+      statements:
+        - Effect: Allow
+          Action:
+            - "logs:CreateLogGroup"
+            - "logs:CreateLogStream"
+            - "logs:PutLogEvents"
+          Resource: "arn:aws:logs:*:*:*"
+        - Effect: Allow
+          Action:
+            - "iot:Publish"
+            - "iot:Subscribe"
+            - "iot:Connect"
+            - "iot:Receive"
+          Resource: "*"
+functions:
+  test-dynamo-event:
+    handler: bin/main
+    environment:
+      ENV: ${self:provider.stage}
+    events:
+      - stream:
+          arn: arn:aws:dynamodb:<tabela>/stream/
+          startingPosition: LATEST
+          batchSize: 100
