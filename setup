@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+asdf plugin update --all || true
+asdf plugin add golang || true
+asdf plugin add make || true
+
+export ASDF_GOLANG_DEFAULT_PACKAGES_FILE=./.default-golang-pkgs
+
+asdf install
+asdf reshim golang
