@@ -14,7 +14,7 @@ func handler(ctx context.Context, event events.DynamoDBEvent) {
 	p := &Proxy{IotWrapper: iot}
 	awsConfig := &AwsConfig{
 		Session:  session.Must(session.NewSession()),
-		Endpoint: aws.NewConfig().WithEndpoint("https://a2309gvsshrrp6-ats.iot.us-east-1.amazonaws.com"),
+		Endpoint: aws.NewConfig().WithEndpoint("https://<id_api>-ats.iot.us-east-1.amazonaws.com"),
 	}
 	p.Proxy(ctx, event, awsConfig)
 }
