@@ -18,6 +18,9 @@ func TestHandler(t *testing.T) {
 			{
 				EventID:   "1",
 				EventName: "INSERT",
+				Change: events.DynamoDBStreamRecord{
+					NewImage: map[string]events.DynamoDBAttributeValue{},
+				},
 			},
 		}
 
