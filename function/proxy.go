@@ -16,8 +16,13 @@ type Proxy struct {
 	IotWrapper IOTWrapper
 }
 
-func (controller *Proxy) Proxy(ctx context.Context, event events.DynamoDBEvent, config *AwsConfig) {
+func (controller *Proxy) Proxy(ctx context.Context, event events.DynamoDBEvent, config *AwsConfig) (string, error) {
 	iotDataClient := controller.IotWrapper.NewFromConfig(config.Session, config.Endpoint)
+
+	var errorsConcat error
+
+	var sent string
+
 	for _, record := range event.Records {
 		fmt.Printf("Processing event ID %s, type %s\n", record.EventID, record.EventName)
 
@@ -38,10 +43,23 @@ func (controller *Proxy) Proxy(ctx context.Context, event events.DynamoDBEvent, 
 		}
 
 		_, err = iotDataClient.Publish(publishInput)
+
 		if err != nil {
-			log.Printf("Error publishing IoT message: %v", err)
+			if errorsConcat == nil {
+				errorsConcat = err
+			} else {
+				errorsConcat = fmt.Errorf("%v, %v", errorsConcat, err)
+			}
+		} else {
+			if sent == "" {
+				sent = fmt.Sprintf("Message sent to %v", iotMessage.AlertId)
+			} else {
+				sent = fmt.Sprintf("%v, Message sent to %v", sent, iotMessage.AlertId)
+			}
 		}
 	}
+
+	return sent, errorsConcat
 }
 
 func (iot *IOT) NewFromConfig(p client.ConfigProvider, cfgs ...*aws.Config) *iotdataplane.IoTDataPlane {
