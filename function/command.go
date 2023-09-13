@@ -30,7 +30,7 @@ func NewCommand(MessageId string, alertId string, state string) *Command {
 
 func (c *Command) IsValidAlertId() error {
 	if c.AlertId == "" {
-		return errors.New("AlertId is required")
+		return &CommandError{Err: errors.New("AlertId is required")}
 	}
 	return nil
 }
