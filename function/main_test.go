@@ -17,12 +17,10 @@ import (
 
 type errorTestCases struct {
 	description string
-	want        string
-	wantErr     error
+	wantErr     []error
 }
 
 func TestHandler(t *testing.T) {
-
 	input := []byte(`
 	  { "M":
 		  {
@@ -34,7 +32,6 @@ func TestHandler(t *testing.T) {
 	for _, tt := range []errorTestCases{
 		{
 			description: "Should return success when publish message",
-			want:        "Message sent to 786855982, Message sent to 786855982",
 			wantErr:     nil,
 		},
 	} {
@@ -82,10 +79,9 @@ func TestHandler(t *testing.T) {
 			iot.On("NewFromConfig", sess, endpoint).Return(iotPlane)
 
 			p := &Proxy{IotWrapper: iot}
-			res, err := p.Proxy(ctx, events.DynamoDBEvent{Records: records}, awsConfig)
+			errs := p.Proxy(ctx, events.DynamoDBEvent{Records: records}, awsConfig)
 
-			assert.Equal(t, tt.wantErr, err)
-			assert.Equal(t, tt.want, res)
+			assert.Equal(t, tt.wantErr, errs)
 		})
 	}
 }

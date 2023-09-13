@@ -16,19 +16,24 @@ type Proxy struct {
 	IotWrapper IOTWrapper
 }
 
-func (controller *Proxy) Proxy(ctx context.Context, event events.DynamoDBEvent, config *AwsConfig) (string, error) {
+func (controller *Proxy) Proxy(ctx context.Context, event events.DynamoDBEvent, config *AwsConfig) []error {
 	iotDataClient := controller.IotWrapper.NewFromConfig(config.Session, config.Endpoint)
 
-	var errorsConcat error
-
-	var sent string
+	var errs []error
 
 	for _, record := range event.Records {
 		fmt.Printf("Processing event ID %s, type %s\n", record.EventID, record.EventName)
 
 		state := record.Change.NewImage["call"].Map()["currentStatus"].String()
 
-		iotMessage := NewCommand().GenerateMessageId().WithActionByState(state).WithAlertId("786855982")
+		iotMessage := NewCommand("1234", "786855982", state)
+
+		errs = iotMessage.Validate()
+
+		if len(errs) > 0 {
+			log.Printf("Error proccess command: %v", errs)
+			continue
+		}
 
 		iotByteMessage, err := json.Marshal(iotMessage)
 		if err != nil {
@@ -45,21 +50,11 @@ func (controller *Proxy) Proxy(ctx context.Context, event events.DynamoDBEvent, 
 		_, err = iotDataClient.Publish(publishInput)
 
 		if err != nil {
-			if errorsConcat == nil {
-				errorsConcat = err
-			} else {
-				errorsConcat = fmt.Errorf("%v, %v", errorsConcat, err)
-			}
-		} else {
-			if sent == "" {
-				sent = fmt.Sprintf("Message sent to %v", iotMessage.AlertId)
-			} else {
-				sent = fmt.Sprintf("%v, Message sent to %v", sent, iotMessage.AlertId)
-			}
+			errs = append(errs, err)
 		}
 	}
 
-	return sent, errorsConcat
+	return errs
 }
 
 func (iot *IOT) NewFromConfig(p client.ConfigProvider, cfgs ...*aws.Config) *iotdataplane.IoTDataPlane {
