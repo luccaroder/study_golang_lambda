@@ -18,9 +18,7 @@ type Proxy struct {
 
 func (controller *Proxy) Proxy(ctx context.Context, event events.DynamoDBEvent, config *AwsConfig) []error {
 	iotDataClient := controller.IotWrapper.NewFromConfig(config.Session, config.Endpoint)
-
 	var errs []error
-
 	for _, record := range event.Records {
 		fmt.Printf("Processing event ID %s, type %s\n", record.EventID, record.EventName)
 
@@ -28,16 +26,17 @@ func (controller *Proxy) Proxy(ctx context.Context, event events.DynamoDBEvent, 
 
 		iotMessage := NewCommand("1234", "786855982", state)
 
-		errs = iotMessage.Validate()
-
-		if len(errs) > 0 {
-			log.Printf("Error proccess command: %v", errs)
+		err := iotMessage.IsValidAlertId()
+		if err != nil {
+			log.Printf("Error proccess command: %v", err)
+			errs = append(errs, err)
 			continue
 		}
 
 		iotByteMessage, err := json.Marshal(iotMessage)
 		if err != nil {
 			log.Printf("Error marshaling IoT message: %v", err)
+			errs = append(errs, err)
 			continue
 		}
 
@@ -52,9 +51,13 @@ func (controller *Proxy) Proxy(ctx context.Context, event events.DynamoDBEvent, 
 		if err != nil {
 			errs = append(errs, err)
 		}
+
 	}
 
-	return errs
+	if len(errs) > 0 {
+		return errs
+	}
+	return nil
 }
 
 func (iot *IOT) NewFromConfig(p client.ConfigProvider, cfgs ...*aws.Config) *iotdataplane.IoTDataPlane {
